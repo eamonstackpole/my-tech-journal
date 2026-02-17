@@ -1,0 +1,8 @@
+{
+    "vcenter_server" : "vcenter.eamon.local",
+    "vm_folder" : "BASEVM",
+    "esxi_host" : "192.168.3.225",
+    "default_network" : "480-Internal",
+    "default_ds" : "datastore1-super25",
+    "default_snap" : "Base"
+}
