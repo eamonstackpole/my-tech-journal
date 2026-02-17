@@ -1,7 +1,8 @@
+# Simple Banner
 function 480Banner(){
     Write-Host "Hello SEC-480"
 }
-
+# Connects to $server if not already connected, otherwise throws error
 function 480Connect([String] $server){
     $conn = $global:DefaultVIServer
     if ($conn){
@@ -12,6 +13,7 @@ function 480Connect([String] $server){
     }
 }
 
+# Disconnects from $server if already connected, otherwise throws error
 function 480Disconnect([String] $server){
     $conn = $global:DefaultVIServer
     if ($conn){
@@ -23,6 +25,7 @@ function 480Disconnect([String] $server){
     }
 }
 
+# Gets and Reads a JSON file at $config_path, throws error for no configuration in file
 function Get-480Config([String] $config_path){
     $conf=$null
     if(Test-Path $config_path){
@@ -34,6 +37,7 @@ function Get-480Config([String] $config_path){
     }
     return $conf
 }
+# Given a folder it lists all the VMs in the folder and prompts user to select one
 Function Select-VM([String] $folder){
     $selected_vm=$null
     try {
@@ -59,12 +63,16 @@ Function Select-VM([String] $folder){
         Write-Host "Invalid Folder: $folder" -ForegroundColor Red
     }
 }
+
+# Creates a linked VM
 Function Add-LinkedVM([String] $name, [string] $vm, [string] $snap, [string] $vmhost, [string] $ds){
     $linked_name = "{0}.linked" -f $name
     $linked_vm = New-VM -LinkedClone -Name $linked_name -VM $vm -ReferenceSnapshot $snap -VMHost $vmhost -Datastore $ds
     Write-Host "Linked Virtual Machine Created!"
     return $linked_vm
 }
+
+# Creates a Full VM using a temporary linked VM as a base
 Function Add-FullVM([String] $name, [string] $vm, [string] $snapshot, [string] $vmhost, [string] $ds){
     $data_store = (Get-Datastore).Name
     $linked = Add-LinkedVM $name $vm $snapshot $vmhost $ds
