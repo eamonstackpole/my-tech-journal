@@ -74,7 +74,6 @@ Function Add-LinkedVM([String] $name, [string] $vm, [string] $snap, [string] $vm
 
 # Creates a Full VM using a temporary linked VM as a base
 Function Add-FullVM([String] $name, [string] $vm, [string] $snapshot, [string] $vmhost, [string] $ds){
-    $data_store = (Get-Datastore).Name
     $linked = Add-LinkedVM $name $vm $snapshot $vmhost $ds
     $full_vm = New-VM -Name $name -VM $linked -VMHost $vmhost -Datastore $ds
     $full_vm | New-Snapshot -Name "Base"
