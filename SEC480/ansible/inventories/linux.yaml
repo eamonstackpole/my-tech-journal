@@ -31,4 +31,4 @@ linux:
     prefix: 24
     gateway: 10.0.5.2
     name_server: 10.0.5.5
-    domain: blue1.local
+    domain: blue25.local
