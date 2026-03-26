@@ -140,7 +140,7 @@ Function Set-Network($name){
         $pick_index = Read-Host "Which index number [x] would you like to pick?"
         if ($pick_index -ge $index -or $pick_index -le 0){
             Write-Host "Invalid index!"
-            exit
+            return
         }
         else {
             $selected_adapter = $adapters[$pick_index-1]
@@ -155,7 +155,7 @@ Function Set-Network($name){
     $pick_index = Read-Host "Which index number [x] would you like to pick?"
         if ($pick_index -ge $index -or $pick_index -le 0){
             Write-Host "Invalid index!"
-            exit
+            return
         }
         else {
             $selected_network = $networks[$pick_index-1]
@@ -167,6 +167,6 @@ Function Set-Network($name){
         Set-Network($name)
     }
     else {
-        exit
+        return
     }
 }
