@@ -1,0 +1,37 @@
+# Installs Fleet Server
+- name: Install Fleet Server
+  hosts: siem
+  become: true
+  tasks:
+    - name: Get Fleet Server Service Token
+      ansible.builtin.uri:
+        url: "https://10.0.5.200:9200/_security/service/elastic/fleet-server/credential/token/SEC480"
+        method: POST
+        user: "elastic"
+        password: "{{ es_pass }}"
+        force_basic_auth: true
+        headers:
+          kbn-xsrf: "480" #to prevent CSRF
+          Content-Type: "application/json"
+        status_code: 200
+        validate_certs: no
+      register: service_token
+    - name: Extract Service Token
+      set_fact:
+        fleet_token: "{{ service_token.json.token.value }}"
+    - name: Install Fleet Server agent
+      ansible.builtin.shell: |
+        curl -L -O https://artifacts.elastic.co/downloads/beats/elastic-agent/elastic-agent-9.3.2-linux-x86_64.tar.gz
+        tar xzvf elastic-agent-9.3.2-linux-x86_64.tar.gz
+    - name: Run Fleet Server agent #HANGS
+      ansible.builtin.shell: |
+        cd elastic-agent-9.3.2-linux-x86_64
+        ./elastic-agent install \
+          --url=https://{{lan_ip}}:8220 \
+          --fleet-server-es=https://{{lan_ip}}:9200 \
+          --fleet-server-service-token={{fleet_token}} \
+          --fleet-server-policy=fleet-server-policy \
+          --fleet-server-port=8220 \
+          --fleet-server-es-insecure \
+          --install-servers \
+          --non-interactive

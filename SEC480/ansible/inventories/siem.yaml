@@ -1,0 +1,21 @@
+siem:
+  hosts:
+    10.0.5.200:
+      lan_ip: 10.0.5.200
+  vars:
+    es_major_version: "9.x"
+    es_port: 9200
+    es_host: 0.0.0.0
+    es_pass: "esta2431"
+    ki_port: 5601
+    fleet_key: "ad123b8949f5fe8ed10c7b3b9185c6773597ab651e52d46da8a639cc0ce2c94f"
+
+agent:
+  hosts:
+    10.0.5.10:
+      hostname: rocky-1
+  vars:
+    es_port: 9200
+    es_host: 10.0.5.200
+    es_pass: "esta2431"
+    ansible_user: deployer

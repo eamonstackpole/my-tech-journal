@@ -1,0 +1,98 @@
+# Installs Elastic & Kibana on siem device
+- name: Install Elastic
+  hosts: siem
+  become: true
+  tasks:
+    - name: Install required packages
+      ansible.builtin.apt:
+        name:
+          - curl
+          - gnupg
+          - apt-transport-https
+          - ca-certificates
+          - wget
+        state: present
+        update_cache: true #apt update
+    - name: Add Elastic GPG key
+      ansible.builtin.shell: "curl -fsSL https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg"
+    - name: Add Elastic APT Repo
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/{{ es_major_version }}/apt stable main"
+        state: present
+        filename: elastic-{{ es_major_version }}
+    - name: Install Elastic & Kibana packages
+      ansible.builtin.apt:
+        name: 
+          - elasticsearch
+          - kibana
+        state: present
+        update_cache: true
+# Configures Elastic & Kibana
+- name: Configure Elastic
+  hosts: siem
+  become: true
+  tasks:
+    - name: Update Elastic YML file
+      lineinfile:
+        path: /etc/elasticsearch/elasticsearch.yml
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+      loop:
+        - { regexp: '^network\.host:', line: 'network.host: {{ es_host }}' }
+        - { regexp: '^http\.port:', line: 'http.port: {{es_port }}' }
+    - name: Enable and start Elastic
+      service:
+        name: elasticsearch
+        state: restarted
+        enabled: yes
+    - name: Set Elastic Password
+      command: "/usr/share/elasticsearch/bin/elasticsearch-reset-password auto -u elastic"
+      args:
+        stdin: "y\n"
+      register: reset_password
+    - name: Get Elastic Password
+      set_fact:
+        temp_pass: "{{ reset_password.stdout | regex_search('New value: (\\S+)', '\\1') | first }}"
+    - name: Restart Elastic
+      service:
+        name: elasticsearch
+        state: restarted
+    - name: Update Kibana YML file
+      lineinfile:
+        path: /etc/kibana/kibana.yml
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+      loop:
+        - { regexp: '^server\.port:', line: 'server.port: {{ ki_port }}' }
+        - { regexp: '^server\.host:', line: 'server.host: "{{ es_host }}"' }
+        - { regexp: '^xpack\.encryptedSavedObjects\.encryptionKey:', line: 'xpack.encryptedSavedObjects.encryptionKey: "{{ fleet_key }}" '}
+    - name: Enable and Start Kibana
+      service:
+        name: kibana
+        state: started
+        enabled: yes
+    - name: Create Enrollment Token
+      shell: "/usr/share/elasticsearch/bin/elasticsearch-create-enrollment-token -s kibana"
+      register: token_output
+    - name: Extract Token
+      set_fact:
+        enrollment_token: "{{ token_output.stdout }}"
+    - name: Enroll Kibana with Token
+      shell: "/usr/share/kibana/bin/kibana-setup --enrollment-token '{{ enrollment_token }}'"
+      args:
+        stdin: "y\n"
+    - name: Restart Kibana
+      service:
+        name: kibana
+        state: restarted
+    - name: Change Elastic password
+      ansible.builtin.uri:
+        url: "https://localhost:9200/_security/user/elastic/_password"
+        method: PUT
+        user: "elastic"
+        password: "{{ temp_pass }}"
+        force_basic_auth: yes
+        body_format: json
+        body:
+          password: "{{ es_pass }}"
+        validate_certs: no

@@ -1,0 +1,27 @@
+# Install Standalone agent
+- name: Install Elastic agent
+  hosts: agent
+  become: true
+  tasks:
+    - name: Install and Extract the agent ZIP
+      ansible.builtin.shell: |
+        curl -L -O https://artifacts.elastic.co/downloads/beats/elastic-agent/elastic-agent-9.3.2-linux-x86_64.tar.gz
+        tar xzvf elastic-agent-9.3.2-linux-x86_64.tar.gz
+    - name: Replace YML file
+      ansible.builtin.copy:
+        src: siem/elastic-agent.yml
+        dest: elastic-agent-9.3.2-linux-x86_64/elastic-agent.yml
+        owner: root
+        group: root
+        mode: '0600'
+    - name: copy ca
+      ansible.builtin.copy:
+        src: /home/champuser/http_ca.crt
+        dest: /home/deployer/http_ca.crt
+        owner: root
+        group: root
+        mode: '0600'
+    - name: Run the agent
+      ansible.builtin.shell:
+        elastic-agent-9.3.2-linux-x86_64/elastic-agent install --non-interactive
+
