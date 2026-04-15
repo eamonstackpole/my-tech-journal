@@ -1,0 +1,66 @@
+# Configures and Deploys ADDS on a DC
+- name: Deploy ADDS
+  hosts: domain_controller
+  vars_prompt:
+    - name: "local_password"
+      prompt: "Enter the new local admin password"
+      private: yes
+    - name: "dsrm_password"
+      prompt: "Enter the DSRM password"
+      private: yes
+  tasks:
+  - name: Set local admin password
+    win_user:
+      name: "Administrator"
+      password: "{{ local_password }}"
+      update_password: always
+      state: present
+  - name: Set hostname
+    win_hostname:
+      name: "{{ hostname }}"
+    register: hname
+  - name: Reboot after hostname change
+    win_reboot:
+    when: hname.reboot_required
+  - name: Install Active Directory
+    win_feature:
+      name: AD-Domain-Services
+      include_management_tools: yes
+      state: present
+    register: adin
+  - name: Reboot after install
+    win_reboot:
+      post_reboot_delay: 300
+      test_command: 'exit (Get-Service -Name DNS).Status -ne "Running"'
+    when: adin.reboot_required
+
+  - name: Create forest
+    win_domain:
+      dns_domain_name: "{{ forest }}"
+      safe_mode_password: "{{ dsrm_password }}"
+    register: for_created
+  - name: Reboot after forest
+    win_reboot:
+      post_reboot_delay: 480
+      test_command: 'exit (Get-Service -Name DNS).Status -ne "Running"'
+    when: for_created.changed
+  - name: Create DNS server forwarder
+    win_shell: |
+      Add-DnsServerForwarder -IPAddress "{{ forward_ip }}"
+  - name: Create OU structure
+    microsoft.ad.ou:
+      name: "{{ top_ou }}"
+      path: "DC={{domain_name}},DC=local"
+      state: present
+  - name: Create Sub-OUs
+    microsoft.ad.ou:
+      name: "{{ item.name }}"
+      path: "{{ item.path }}"
+      state: present
+    loop:
+      - { name: "Accounts", path: "OU={{top_ou}},DC={{domain_name}},DC=local" }
+      - { name: "Groups", path: "OU=Accounts,OU={{top_ou}},DC={{domain_name}},DC=local"}
+      - { name: "Computers", path: "OU={{top_ou}},DC={{domain_name}},DC=local"}
+      - { name: "Servers", path: "OU=Computers,OU={{top_ou}},DC={{domain_name}},DC=local"}
+      - { name: "Workstations", path: "OU=Computers,OU={{top_ou}},DC={{domain_name}},DC=local"}
+

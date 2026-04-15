@@ -170,3 +170,10 @@ Function Set-Network($name){
         return
     }
 }
+# Sets a static IP address to the given virtual machine
+Function Set-WindowsStatic($name, $ip, $netmask, $gateway, $dns, $guest_user){
+$guest_creds = Get-Credential #New-Object System.Net.NetworkCredential($guest_user, $guest_password)
+Invoke-VMScript -VM $name -ScriptText "netsh interface ip set address name='Ethernet0' static $ip $netmask $gateway" -GuestCredential $guest_creds -ScriptType Powershell
+Invoke-VMScript -VM $name -ScriptText "netsh interface ip set dns name='Ethernet0' static $dns" -GuestCredential $guest_creds -ScriptType Powershell
+
+}

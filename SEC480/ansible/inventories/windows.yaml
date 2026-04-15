@@ -1,0 +1,15 @@
+all:
+  children:
+    servers:
+      children:
+        domain_controller:
+          hosts:
+            10.0.5.5:
+              hostname: "DC-Blue25"
+              forest: Blue.local
+              forward_ip: 10.0.5.2
+              top_ou: "Blue25"
+              domain_name: "Blue"
+              ansible_user: deployer
+              ansible_connection: winrm
+              ansible_winrm_port: 5985
