@@ -6,10 +6,25 @@ all:
           hosts:
             10.0.5.5:
               hostname: "DC-Blue25"
-              forest: Blue.local
-              forward_ip: 10.0.5.2
-              top_ou: "Blue25"
-              domain_name: "Blue"
-              ansible_user: deployer
-              ansible_connection: winrm
-              ansible_winrm_port: 5985
+        file_server:
+          hosts:
+            10.0.5.85:
+              hostname: "FS-Blue25"
+              static_ip: 10.0.5.47
+    workstations:
+      hosts:
+        10.0.5.88:
+  vars:
+    ansible_user: deployer
+    ansible_password: 'P1tt@nc37734'
+    ansible_connection: winrm
+    ansible_winrm_port: 5985
+    ansible_winrm_transport: basic
+    ansible_winrm_server_cert_validation: ignore
+    ansibme_winrm_scheme: http
+    top_ou: "Blue25"
+    domain_name: "Blue"
+    forest: Blue.local
+    gateway: 10.0.5.2
+    admin_account: "Administrator"
+    
