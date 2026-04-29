@@ -1,0 +1,40 @@
+# Adds Users and Groups based on users.csv file
+- name: Domain Users and Groups
+  hosts: domain_controller
+  gather_facts: false
+  tasks:
+  - name: read csv file
+    community.general.read_csv:
+      path: files/users/users.csv
+    register: users
+    delegate_to: localhost
+  - name: Create Groups
+    win_domain_group:
+      name: "{{ item | trim }}" #Removes space from csv
+      path: "OU=Groups,OU=Accounts,OU=Blue25,DC=Blue,DC=local"
+      state: present
+      scope: global
+      category: security
+    loop: "{{ users.list | map(attribute='Groups', default='') | map('split', ',') | flatten | map('replace', '\"', '') | unique }}"
+  - name: Create Users
+    vars:
+      sam_name: "{{ item.Users | trim | replace('-', ' ') | replace(' ', '_')}}"
+    win_domain_user:
+      name: "{{item.Users | trim}}"
+      sam_account_name: "{{ sam_name }}"
+      path: "OU=Accounts,OU=Blue25,DC=Blue,DC=local"
+      state: present
+      groups: "{{ [item.Groups, item['null'] | default([])] | flatten | select('string') | map('replace', '\"', '') | map('trim') | list }}"
+      groups_action: Add
+      password: "{{ lookup('password', '/home/champuser/Desktop/credentials/' + 'user=' + sam_name + '.txt length=22 chars=ascii_letters,digits,!@#$%^&*')}}"
+      update_password: on_create
+      password_expired: yes
+    loop: "{{ users.list }}"
+  - name: Consolidate credentials
+    ansible.builtin.shell: "tail -n +1 /home/champuser/Desktop/credentials/*.txt > /home/champuser/Desktop/masterlist.txt"
+    delegate_to: localhost
+    run_once: true
+  - name: Delete old files
+    ansible.builtin.shell: "rm -r /home/champuser/Desktop/credentials"
+    delegate_to: localhost
+    run_once: true

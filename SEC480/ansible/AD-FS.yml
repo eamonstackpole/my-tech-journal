@@ -1,0 +1,36 @@
+# Set up File Server
+- name: Deploy AD File Server
+  hosts: file_server
+  vars_prompt:
+    - name: "admin_password"
+      prompt: "Enter the domain admin password"
+      private: yes
+  tasks:
+  - name: Set static IP address
+    win_dns_client:
+      adapter_names: "Ethernet0"
+      dns_servers: "{{ gateway }}"
+  - name: Configure IP
+    win_shell: New-NetIPAddress -InterfaceAlias "Ethernet0" -IPAddress "{{ static_ip }}" -PrefixLength 24 -DefaultGateway "{{ gateway }}"
+    async: 100
+    poll: 0
+  - name: Update hosts
+    set_fact:
+      ansible_host: "{{ static_ip }}"
+  - name: Wait for winrm
+    wait_for:
+      host: "{{ ansible_host }}"
+      port: 5985
+      state: started
+      delay: 10
+      timeout: 300
+    delegate_to: localhost
+  - name: Join the Domain
+    win_shell: |
+      $pass = ConvertTo-SecureString "{{ admin_password }}" -AsPlainText
+      $credentials = New-Object System.Management.Automation.PSCredential("Blue\Administrator", $pass)
+      Add-Computer -DomainName "Blue.local" -Credential $credentials -Restart -Force
+    register: domain_joined
+  - name: Reboot after Domain Join
+    win_reboot:
+    when: domain_joined.reboot_required
